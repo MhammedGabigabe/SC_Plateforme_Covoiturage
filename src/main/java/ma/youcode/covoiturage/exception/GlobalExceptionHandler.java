@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -73,6 +75,20 @@ public class GlobalExceptionHandler {
         String message = "Le paramètre '" + ex.getName() + "' a une valeur invalide : " + ex.getValue();
         log.warn(message);
         return buildProblemDetail(HttpStatus.BAD_REQUEST, "Requête invalide", message, request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ProblemDetail handleMissingParameter(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        String message = "Le paramètre '" + ex.getParameterName() + "' est obligatoire";
+        log.warn(message);
+        return buildProblemDetail(HttpStatus.BAD_REQUEST, "Requête invalide", message, request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        String message = "La méthode " + ex.getMethod() + " n'est pas autorisée sur cette URL";
+        log.warn(message);
+        return buildProblemDetail(HttpStatus.METHOD_NOT_ALLOWED, "Méthode non autorisée", message, request);
     }
 
     @ExceptionHandler(Exception.class)
