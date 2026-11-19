@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-create-reservation
+      author: gabi
+      changes:
+        - createTable:
+            tableName: reservation
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: passager_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_reservation_passager
+                    references: passager(id)
+              - column:
+                  name: trajet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_reservation_trajet
+                    references: trajet(id)
+              - column:
+                  name: point_montee_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_reservation_point_montee
+                    references: point_arret(id)
+              - column:
+                  name: point_descente_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_reservation_point_descente
+                    references: point_arret(id)
+              - column:
+                  name: nombre_places
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: montant_total
+                  type: NUMERIC(10,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: date_reservation
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: statut
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
