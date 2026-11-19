@@ -25,11 +25,13 @@ public class Reservation {
     @JoinColumn(name = "trajet_id", nullable = false)
     private Trajet trajet;
 
-    @Column(nullable = false)
-    private Long pointMonteeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "point_montee_id", nullable = false)
+    private PointArret pointMontee;
 
-    @Column(nullable = false)
-    private Long pointDescenteId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "point_descente_id", nullable = false)
+    private PointArret pointDescente;
 
     @Column(nullable = false)
     private Integer nombrePlaces;
