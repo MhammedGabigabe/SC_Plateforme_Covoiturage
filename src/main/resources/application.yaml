@@ -21,8 +21,12 @@ spring:
     contexts: dev
 
 springdoc:
+  paths-to-match: /api/**
   swagger-ui:
     path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    display-request-duration: true
 
 logging:
   level:
