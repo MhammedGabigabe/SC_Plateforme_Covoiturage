@@ -2,3 +2,27 @@ databaseChangeLog:
   - include:
       file: changes/000-init.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/001-create-conducteur.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-create-passager.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-create-vehicule.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-create-trajet.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/005-create-point-arret.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/006-create-reservation.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/007-constraints.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/008-seed-data.yaml
+      relativeToChangelogFile: true
