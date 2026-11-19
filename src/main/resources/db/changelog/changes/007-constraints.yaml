@@ -1,0 +1,58 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 007-uniques
+      author: gabi
+      changes:
+        - addUniqueConstraint:
+            tableName: conducteur
+            columnNames: email
+            constraintName: uk_conducteur_email
+        - addUniqueConstraint:
+            tableName: conducteur
+            columnNames: numero_permis
+            constraintName: uk_conducteur_permis
+        - addUniqueConstraint:
+            tableName: passager
+            columnNames: email
+            constraintName: uk_passager_email
+        - addUniqueConstraint:
+            tableName: vehicule
+            columnNames: immatriculation
+            constraintName: uk_vehicule_immatriculation
+        - addUniqueConstraint:
+            tableName: point_arret
+            columnNames: trajet_id, ordre
+            constraintName: uk_point_arret_trajet_ordre
+        - addUniqueConstraint:
+            tableName: point_arret
+            columnNames: trajet_id, ville
+            constraintName: uk_point_arret_trajet_ville
+
+  - changeSet:
+      id: 007-checks
+      author: gabi
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE vehicule ADD CONSTRAINT ck_vehicule_capacite CHECK (capacite BETWEEN 1 AND 8);
+              ALTER TABLE trajet ADD CONSTRAINT ck_trajet_places CHECK (places_proposees >= 1);
+              ALTER TABLE point_arret ADD CONSTRAINT ck_point_arret_prix CHECK (prix_depuis_depart >= 0);
+              ALTER TABLE reservation ADD CONSTRAINT ck_reservation_places CHECK (nombre_places >= 1);
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE reservation DROP CONSTRAINT ck_reservation_places;
+              ALTER TABLE point_arret DROP CONSTRAINT ck_point_arret_prix;
+              ALTER TABLE trajet DROP CONSTRAINT ck_trajet_places;
+              ALTER TABLE vehicule DROP CONSTRAINT ck_vehicule_capacite;
+
+  - changeSet:
+      id: 007-uk-reservation-confirmee
+      author: gabi
+      changes:
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_reservation_confirmee ON reservation (passager_id, trajet_id) WHERE statut = 'CONFIRMEE'
+      rollback:
+        - sql:
+            sql: DROP INDEX uk_reservation_confirmee
