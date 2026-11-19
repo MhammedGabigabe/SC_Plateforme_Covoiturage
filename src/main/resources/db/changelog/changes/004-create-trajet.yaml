@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-trajet
+      author: gabi
+      changes:
+        - createTable:
+            tableName: trajet
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: vehicule_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_trajet_vehicule
+                    references: vehicule(id)
+              - column:
+                  name: date_depart
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: places_proposees
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: statut
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
