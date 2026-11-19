@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-seed-data
+      author: gabi
+      context: dev
+      changes:
+        - sqlFile:
+            path: 008-seed-data.sql
+            relativeToChangelogFile: true
+            encoding: UTF-8
