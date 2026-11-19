@@ -91,6 +91,12 @@ public class GlobalExceptionHandler {
         return buildProblemDetail(HttpStatus.METHOD_NOT_ALLOWED, "Méthode non autorisée", message, request);
     }
 
+    @ExceptionHandler(InvalidRequestException.class)
+    public ProblemDetail handleInvalidRequest(InvalidRequestException ex, HttpServletRequest request) {
+        log.warn("Requête invalide : {}", ex.getMessage());
+        return buildProblemDetail(HttpStatus.BAD_REQUEST, "Requête invalide", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleException(Exception ex, HttpServletRequest request) {
         log.error("Erreur interne sur {}", request.getRequestURI(), ex);
