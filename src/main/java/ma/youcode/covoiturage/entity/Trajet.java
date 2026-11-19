@@ -29,11 +29,19 @@ public class Trajet {
     private Integer placesProposees;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private StatutTrajet statut;
 
     @OneToMany(mappedBy = "trajet", cascade = CascadeType.ALL)
     @OrderBy("ordre ASC")
     private List<PointArret> pointsArret = new ArrayList<>();
+
+    public String getVilleDepart() {
+        if (pointsArret.isEmpty()) {
+            return null;
+        }
+        return pointsArret.get(0).getVille();
+    }
 
     public String getVilleArrivee() {
         if (pointsArret.isEmpty()) {
