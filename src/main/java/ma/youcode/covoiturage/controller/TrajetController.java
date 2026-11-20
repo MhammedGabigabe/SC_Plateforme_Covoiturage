@@ -38,4 +38,17 @@ public class TrajetController {
             @Valid @RequestBody TrajetRequest request) {
         return trajetService.publier(conducteurId, request);
     }
+
+    @Operation(summary = "Consulter le détail d'un trajet",
+            description = "Renvoie le parcours (points ordonnés), les places restantes (calculées) et le conducteur.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Trajet trouvé"),
+            @ApiResponse(responseCode = "404", description = "Trajet introuvable")
+    })
+    @GetMapping("/{id}")
+    public TrajetResponse consulter(
+            @Parameter(description = "Identifiant du trajet", example = "1")
+            @PathVariable Long id) {
+        return trajetService.consulter(id);
+    }
 }
