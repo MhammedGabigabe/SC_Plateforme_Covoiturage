@@ -4,8 +4,10 @@ import ma.youcode.covoiturage.dto.response.PointArretResponse;
 import ma.youcode.covoiturage.dto.response.TrajetResponse;
 import ma.youcode.covoiturage.entity.PointArret;
 import ma.youcode.covoiturage.entity.Trajet;
+import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+@Mapper
 public interface TrajetMapper {
 
     @Mapping(source = "trajet.id", target = "id")
