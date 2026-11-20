@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.youcode.covoiturage.dto.request.PointArretRequest;
 import ma.youcode.covoiturage.dto.request.TrajetRequest;
+import ma.youcode.covoiturage.dto.response.TrajetRechercheResponse;
 import ma.youcode.covoiturage.dto.response.TrajetResponse;
 import ma.youcode.covoiturage.entity.PointArret;
 import ma.youcode.covoiturage.entity.Trajet;
@@ -19,11 +20,14 @@ import ma.youcode.covoiturage.repository.ReservationRepository;
 import ma.youcode.covoiturage.repository.TrajetRepository;
 import ma.youcode.covoiturage.repository.VehiculeRepository;
 import ma.youcode.covoiturage.service.TrajetService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +38,8 @@ import java.util.Set;
 @Slf4j
 @Transactional
 public class TrajetServiceImpl implements TrajetService {
+
+    private static final BigDecimal PRIX_MAXIMUM = new BigDecimal("99999999.99");
 
     private final TrajetRepository trajetRepository;
     private final VehiculeRepository vehiculeRepository;
@@ -97,6 +103,36 @@ public class TrajetServiceImpl implements TrajetService {
 
         int placesRestantes = calculerPlacesRestantes(trajet);
         return trajetMapper.toResponse(trajet, placesRestantes);
+    }
+
+    @Override
+    public Page<TrajetRechercheResponse> rechercher(String villeDepart, String villeArrivee, LocalDate date,
+                                                    Integer nombrePlaces, BigDecimal prixMax,
+                                                    int page, int taille) {
+        if (villeDepart.trim().equalsIgnoreCase(villeArrivee.trim())) {
+            throw new InvalidRequestException("La ville de départ et la ville d'arrivée doivent être différentes");
+        }
+        if (nombrePlaces < 1) {
+            throw new InvalidRequestException("Le nombre de places recherchées doit être au minimum de 1");
+        }
+        if (page < 0 || taille < 1 || taille > 50) {
+            throw new InvalidRequestException("La page doit être >= 0 et la taille comprise entre 1 et 50");
+        }
+
+        if (prixMax == null) {
+            prixMax = PRIX_MAXIMUM;
+        }
+
+        LocalDateTime debutJour = date.atStartOfDay();
+        LocalDateTime finJour = date.plusDays(1).atStartOfDay();
+
+        Page<TrajetRechercheResponse> resultats = trajetRepository.rechercher(
+                villeDepart.trim(), villeArrivee.trim(), debutJour, finJour, prixMax, nombrePlaces,
+                StatutTrajet.PUBLIE, StatutReservation.CONFIRMEE, PageRequest.of(page, taille));
+
+        log.info("Recherche {} -> {} le {} : {} résultat(s)", villeDepart.trim(), villeArrivee.trim(), date,
+                resultats.getTotalElements());
+        return resultats;
     }
 
     private int calculerPlacesRestantes(Trajet trajet) {
