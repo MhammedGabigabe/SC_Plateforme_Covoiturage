@@ -6,4 +6,6 @@ import ma.youcode.covoiturage.dto.response.TrajetResponse;
 public interface TrajetService {
 
     TrajetResponse publier(Long conducteurId, TrajetRequest request);
+
+    TrajetResponse consulter(Long id);
 }

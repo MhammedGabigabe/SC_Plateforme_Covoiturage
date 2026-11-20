@@ -8,12 +8,14 @@ import ma.youcode.covoiturage.dto.response.TrajetResponse;
 import ma.youcode.covoiturage.entity.PointArret;
 import ma.youcode.covoiturage.entity.Trajet;
 import ma.youcode.covoiturage.entity.Vehicule;
+import ma.youcode.covoiturage.entity.enums.StatutReservation;
 import ma.youcode.covoiturage.entity.enums.StatutTrajet;
 import ma.youcode.covoiturage.exception.ForbiddenException;
 import ma.youcode.covoiturage.exception.InvalidRequestException;
 import ma.youcode.covoiturage.exception.ResourceNotFoundException;
 import ma.youcode.covoiturage.mapper.TrajetMapper;
 import ma.youcode.covoiturage.repository.ConducteurRepository;
+import ma.youcode.covoiturage.repository.ReservationRepository;
 import ma.youcode.covoiturage.repository.TrajetRepository;
 import ma.youcode.covoiturage.repository.VehiculeRepository;
 import ma.youcode.covoiturage.service.TrajetService;
@@ -36,6 +38,7 @@ public class TrajetServiceImpl implements TrajetService {
     private final TrajetRepository trajetRepository;
     private final VehiculeRepository vehiculeRepository;
     private final ConducteurRepository conducteurRepository;
+    private final ReservationRepository reservationRepository;
     private final TrajetMapper trajetMapper;
 
     @Override
@@ -85,6 +88,21 @@ public class TrajetServiceImpl implements TrajetService {
                 conducteurId, trajetEnregistre.getVilleDepart(), trajetEnregistre.getVilleArrivee());
 
         return trajetMapper.toResponse(trajetEnregistre, trajetEnregistre.getPlacesProposees());
+    }
+
+    @Override
+    public TrajetResponse consulter(Long id) {
+        Trajet trajet = trajetRepository.findDetailById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Trajet introuvable avec l'id " + id));
+
+        int placesRestantes = calculerPlacesRestantes(trajet);
+        return trajetMapper.toResponse(trajet, placesRestantes);
+    }
+
+    private int calculerPlacesRestantes(Trajet trajet) {
+        Long placesReservees = reservationRepository
+                .compterPlacesReservees(trajet.getId(), StatutReservation.CONFIRMEE);
+        return trajet.getPlacesProposees() - placesReservees.intValue();
     }
 
     private void verifierParcours(List<PointArretRequest> points) {
