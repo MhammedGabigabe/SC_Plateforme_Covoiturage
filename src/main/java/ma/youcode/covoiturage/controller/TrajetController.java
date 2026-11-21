@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import ma.youcode.covoiturage.dto.request.TrajetRequest;
+import ma.youcode.covoiturage.dto.response.ReservationsTrajetResponse;
 import ma.youcode.covoiturage.dto.response.TrajetRechercheResponse;
 import ma.youcode.covoiturage.dto.response.TrajetResponse;
 import ma.youcode.covoiturage.service.TrajetService;
@@ -88,5 +89,23 @@ public class TrajetController {
             @Parameter(description = "Identifiant du trajet", example = "1")
             @PathVariable Long id) {
         return trajetService.consulter(id);
+    }
+
+    @Operation(summary = "Consulter les réservations de mon trajet",
+            description = "Renvoie les réservations du trajet (confirmées et annulées) avec le passager, "
+                    + "et les places restantes. Un conducteur ne voit que les réservations de ses propres trajets.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Réservations du trajet (éventuellement vide)"),
+            @ApiResponse(responseCode = "400", description = "En-tête X-Conducteur-Id manquant"),
+            @ApiResponse(responseCode = "403", description = "Trajet d'un autre conducteur"),
+            @ApiResponse(responseCode = "404", description = "Trajet introuvable")
+    })
+    @GetMapping("/{id}/reservations")
+    public ReservationsTrajetResponse consulterReservations(
+            @Parameter(description = "Identifiant du trajet", example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Identifiant du conducteur connecté", example = "1")
+            @RequestHeader("X-Conducteur-Id") Long conducteurId) {
+        return trajetService.consulterReservations(id, conducteurId);
     }
 }
