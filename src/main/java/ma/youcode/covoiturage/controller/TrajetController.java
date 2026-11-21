@@ -108,4 +108,24 @@ public class TrajetController {
             @RequestHeader("X-Conducteur-Id") Long conducteurId) {
         return trajetService.consulterReservations(id, conducteurId);
     }
+
+    @Operation(summary = "Terminer un trajet",
+            description = "Possible uniquement après l'heure de départ, pour un trajet PUBLIE ou COMPLET. "
+                    + "TERMINE est un statut final : le trajet n'est plus modifiable ni réservable.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Trajet terminé"),
+            @ApiResponse(responseCode = "400", description = "En-tête X-Conducteur-Id manquant"),
+            @ApiResponse(responseCode = "403", description = "Trajet d'un autre conducteur"),
+            @ApiResponse(responseCode = "404", description = "Trajet introuvable"),
+            @ApiResponse(responseCode = "409", description = "Trajet déjà terminé ou annulé, ou heure de départ pas encore passée")
+    })
+    @PatchMapping("/{id}/terminer")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void terminer(
+            @Parameter(description = "Identifiant du trajet", example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Identifiant du conducteur connecté", example = "1")
+            @RequestHeader("X-Conducteur-Id") Long conducteurId) {
+        trajetService.terminer(id, conducteurId);
+    }
 }
