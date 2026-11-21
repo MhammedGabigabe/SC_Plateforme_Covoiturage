@@ -12,4 +12,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             + "WHERE r.trajet.id = :trajetId AND r.statut = :statut")
     Long compterPlacesReservees(@Param("trajetId") Long trajetId,
                                 @Param("statut") StatutReservation statut);
+
+    boolean existsByPassagerIdAndTrajetIdAndStatut(Long passagerId, Long trajetId, StatutReservation statut);
+
 }
