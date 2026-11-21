@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.youcode.covoiturage.dto.request.PointArretRequest;
 import ma.youcode.covoiturage.dto.request.TrajetRequest;
+import ma.youcode.covoiturage.dto.response.ReservationConducteurResponse;
+import ma.youcode.covoiturage.dto.response.ReservationsTrajetResponse;
 import ma.youcode.covoiturage.dto.response.TrajetRechercheResponse;
 import ma.youcode.covoiturage.dto.response.TrajetResponse;
 import ma.youcode.covoiturage.entity.PointArret;
@@ -14,6 +16,7 @@ import ma.youcode.covoiturage.entity.enums.StatutTrajet;
 import ma.youcode.covoiturage.exception.ForbiddenException;
 import ma.youcode.covoiturage.exception.InvalidRequestException;
 import ma.youcode.covoiturage.exception.ResourceNotFoundException;
+import ma.youcode.covoiturage.mapper.ReservationMapper;
 import ma.youcode.covoiturage.mapper.TrajetMapper;
 import ma.youcode.covoiturage.repository.ConducteurRepository;
 import ma.youcode.covoiturage.repository.ReservationRepository;
@@ -46,6 +49,7 @@ public class TrajetServiceImpl implements TrajetService {
     private final ConducteurRepository conducteurRepository;
     private final ReservationRepository reservationRepository;
     private final TrajetMapper trajetMapper;
+    private final ReservationMapper reservationMapper;
 
     @Override
     public TrajetResponse publier(Long conducteurId, TrajetRequest request) {
@@ -103,6 +107,26 @@ public class TrajetServiceImpl implements TrajetService {
 
         int placesRestantes = calculerPlacesRestantes(trajet);
         return trajetMapper.toResponse(trajet, placesRestantes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReservationsTrajetResponse consulterReservations(Long trajetId, Long conducteurId) {
+        Trajet trajet = trajetRepository.findDetailById(trajetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trajet introuvable avec l'id " + trajetId));
+
+        if (!trajet.getVehicule().getConducteur().getId().equals(conducteurId)) {
+            throw new ForbiddenException("Le trajet " + trajetId + " n'appartient pas au conducteur " + conducteurId);
+        }
+
+        List<ReservationConducteurResponse> reservations = reservationRepository.listerParTrajet(trajetId).stream()
+                .map(reservationMapper::toConducteurResponse)
+                .toList();
+
+        int placesRestantes = calculerPlacesRestantes(trajet);
+
+        return new ReservationsTrajetResponse(trajet.getId(), trajet.getVilleDepart(), trajet.getVilleArrivee(),
+                trajet.getPlacesProposees(), placesRestantes, trajet.getStatut(), reservations);
     }
 
     @Override
