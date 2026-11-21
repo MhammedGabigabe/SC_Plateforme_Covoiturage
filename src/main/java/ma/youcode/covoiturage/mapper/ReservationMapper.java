@@ -1,5 +1,6 @@
 package ma.youcode.covoiturage.mapper;
 
+import ma.youcode.covoiturage.dto.response.ReservationConducteurResponse;
 import ma.youcode.covoiturage.dto.response.ReservationResponse;
 import ma.youcode.covoiturage.dto.response.ReservationResumeResponse;
 import ma.youcode.covoiturage.entity.Reservation;
@@ -28,4 +29,11 @@ public interface ReservationMapper {
     @Mapping(source = "trajet.dateDepart", target = "dateDepart")
     @Mapping(source = "trajet.statut", target = "statutTrajet")
     ReservationResumeResponse toResume(Reservation reservation);
+
+    @Mapping(source = "passager.id", target = "passagerId")
+    @Mapping(source = "passager.nom", target = "passagerNom")
+    @Mapping(source = "passager.prenom", target = "passagerPrenom")
+    @Mapping(source = "pointMontee.ville", target = "villeMontee")
+    @Mapping(source = "pointDescente.ville", target = "villeDescente")
+    ReservationConducteurResponse toConducteurResponse(Reservation reservation);
 }
