@@ -9,6 +9,7 @@ import ma.youcode.covoiturage.dto.response.ReservationsTrajetResponse;
 import ma.youcode.covoiturage.dto.response.TrajetRechercheResponse;
 import ma.youcode.covoiturage.dto.response.TrajetResponse;
 import ma.youcode.covoiturage.entity.PointArret;
+import ma.youcode.covoiturage.entity.Reservation;
 import ma.youcode.covoiturage.entity.Trajet;
 import ma.youcode.covoiturage.entity.Vehicule;
 import ma.youcode.covoiturage.entity.enums.StatutReservation;
@@ -153,6 +154,34 @@ public class TrajetServiceImpl implements TrajetService {
         trajetRepository.save(trajet);
 
         log.info("Trajet {} terminé par le conducteur {}", trajetId, conducteurId);
+    }
+
+    @Override
+    public void annuler(Long trajetId, Long conducteurId) {
+        Trajet trajet = trajetRepository.findByIdForUpdate(trajetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trajet introuvable avec l'id " + trajetId));
+
+        if (!trajet.getVehicule().getConducteur().getId().equals(conducteurId)) {
+            throw new ForbiddenException("Le trajet " + trajetId + " n'appartient pas au conducteur " + conducteurId);
+        }
+
+        if (trajet.getStatut() != StatutTrajet.PUBLIE && trajet.getStatut() != StatutTrajet.COMPLET) {
+            throw new BusinessRuleException("Le trajet " + trajetId + " est au statut " + trajet.getStatut()
+                    + " : seuls les trajets PUBLIE ou COMPLET peuvent être annulés");
+        }
+
+        List<Reservation> reservations =
+                reservationRepository.findByTrajetIdAndStatut(trajetId, StatutReservation.CONFIRMEE);
+        for (Reservation reservation : reservations) {
+            reservation.setStatut(StatutReservation.ANNULEE);
+        }
+        reservationRepository.saveAll(reservations);
+
+        trajet.setStatut(StatutTrajet.ANNULE);
+        trajetRepository.save(trajet);
+
+        log.info("Trajet {} annulé par le conducteur {} : {} réservation(s) annulée(s)",
+                trajetId, conducteurId, reservations.size());
     }
 
     @Override
