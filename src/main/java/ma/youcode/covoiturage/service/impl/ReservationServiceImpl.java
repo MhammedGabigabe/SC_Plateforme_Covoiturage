@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.youcode.covoiturage.dto.request.ReservationRequest;
 import ma.youcode.covoiturage.dto.response.ReservationResponse;
+import ma.youcode.covoiturage.dto.response.ReservationResumeResponse;
 import ma.youcode.covoiturage.entity.Passager;
 import ma.youcode.covoiturage.entity.PointArret;
 import ma.youcode.covoiturage.entity.Reservation;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -137,6 +139,18 @@ public class ReservationServiceImpl implements ReservationService {
 
         log.info("Réservation {} annulée par le passager {} sur le trajet {} (statut du trajet : {})",
                 reservationId, passagerId, trajet.getId(), trajet.getStatut());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReservationResumeResponse> consulterMesReservations(Long passagerId) {
+        if (!passagerRepository.existsById(passagerId)) {
+            throw new ResourceNotFoundException("Passager introuvable avec l'id " + passagerId);
+        }
+
+        return reservationRepository.listerParPassager(passagerId).stream()
+                .map(reservationMapper::toResume)
+                .toList();
     }
 
     private PointArret trouverPoint(Long pointId, Trajet trajet) {
