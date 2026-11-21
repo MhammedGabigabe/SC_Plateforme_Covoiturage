@@ -9,9 +9,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import ma.youcode.covoiturage.dto.request.ReservationRequest;
 import ma.youcode.covoiturage.dto.response.ReservationResponse;
+import ma.youcode.covoiturage.dto.response.ReservationResumeResponse;
 import ma.youcode.covoiturage.service.ReservationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/reservations")
@@ -38,6 +41,21 @@ public class ReservationController {
             @RequestHeader("X-Passager-Id") Long passagerId,
             @Valid @RequestBody ReservationRequest request) {
         return reservationService.reserver(passagerId, request);
+    }
+
+    @Operation(summary = "Consulter mes réservations",
+            description = "Renvoie l'historique du passager connecté : réservations confirmées et annulées, "
+                    + "de la plus récente à la plus ancienne. Un passager ne voit jamais les réservations des autres.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Liste des réservations (éventuellement vide)"),
+            @ApiResponse(responseCode = "400", description = "En-tête X-Passager-Id manquant"),
+            @ApiResponse(responseCode = "404", description = "Passager introuvable")
+    })
+    @GetMapping
+    public List<ReservationResumeResponse> consulterMesReservations(
+            @Parameter(description = "Identifiant du passager connecté", example = "1")
+            @RequestHeader("X-Passager-Id") Long passagerId) {
+        return reservationService.consulterMesReservations(passagerId);
     }
 
     @Operation(summary = "Annuler ma réservation",
