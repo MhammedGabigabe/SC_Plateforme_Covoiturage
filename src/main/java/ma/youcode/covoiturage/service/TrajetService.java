@@ -19,4 +19,6 @@ public interface TrajetService {
                                              Integer nombrePlaces, BigDecimal prixMax, int page, int taille);
 
     ReservationsTrajetResponse consulterReservations(Long trajetId, Long conducteurId);
+
+    void terminer(Long trajetId, Long conducteurId);
 }

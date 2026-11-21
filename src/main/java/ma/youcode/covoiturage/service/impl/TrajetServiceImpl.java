@@ -13,6 +13,7 @@ import ma.youcode.covoiturage.entity.Trajet;
 import ma.youcode.covoiturage.entity.Vehicule;
 import ma.youcode.covoiturage.entity.enums.StatutReservation;
 import ma.youcode.covoiturage.entity.enums.StatutTrajet;
+import ma.youcode.covoiturage.exception.BusinessRuleException;
 import ma.youcode.covoiturage.exception.ForbiddenException;
 import ma.youcode.covoiturage.exception.InvalidRequestException;
 import ma.youcode.covoiturage.exception.ResourceNotFoundException;
@@ -127,6 +128,31 @@ public class TrajetServiceImpl implements TrajetService {
 
         return new ReservationsTrajetResponse(trajet.getId(), trajet.getVilleDepart(), trajet.getVilleArrivee(),
                 trajet.getPlacesProposees(), placesRestantes, trajet.getStatut(), reservations);
+    }
+
+    @Override
+    public void terminer(Long trajetId, Long conducteurId) {
+        Trajet trajet = trajetRepository.findByIdForUpdate(trajetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trajet introuvable avec l'id " + trajetId));
+
+        if (!trajet.getVehicule().getConducteur().getId().equals(conducteurId)) {
+            throw new ForbiddenException("Le trajet " + trajetId + " n'appartient pas au conducteur " + conducteurId);
+        }
+
+        if (trajet.getStatut() != StatutTrajet.PUBLIE && trajet.getStatut() != StatutTrajet.COMPLET) {
+            throw new BusinessRuleException("Le trajet " + trajetId + " est au statut " + trajet.getStatut()
+                    + " : seuls les trajets PUBLIE ou COMPLET peuvent être terminés");
+        }
+
+        if (LocalDateTime.now().isBefore(trajet.getDateDepart())) {
+            throw new BusinessRuleException("Le trajet " + trajetId
+                    + " ne peut être terminé qu'après son heure de départ (" + trajet.getDateDepart() + ")");
+        }
+
+        trajet.setStatut(StatutTrajet.TERMINE);
+        trajetRepository.save(trajet);
+
+        log.info("Trajet {} terminé par le conducteur {}", trajetId, conducteurId);
     }
 
     @Override
