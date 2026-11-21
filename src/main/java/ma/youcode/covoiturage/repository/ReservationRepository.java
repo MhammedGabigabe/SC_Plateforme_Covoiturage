@@ -26,4 +26,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             ORDER BY r.dateReservation DESC
             """)
     List<Reservation> listerParPassager(@Param("passagerId") Long passagerId);
+
+    @Query("""
+            SELECT r FROM Reservation r
+            JOIN FETCH r.passager
+            JOIN FETCH r.pointMontee
+            JOIN FETCH r.pointDescente
+            WHERE r.trajet.id = :trajetId
+            ORDER BY r.dateReservation
+            """)
+    List<Reservation> listerParTrajet(@Param("trajetId") Long trajetId);
 }
