@@ -9,6 +9,11 @@ public record TrajetRechercheResponse(
         String villeArrivee,
         LocalDateTime heureDepart,
         LocalDateTime heureArrivee,
-        BigDecimal prixSegment
+        BigDecimal prixSegment,
+        Long placesRestantes,
+        String conducteurNom,
+        String conducteurPrenom,
+        String vehiculeMarque,
+        String vehiculeModele
 ) {
 }
