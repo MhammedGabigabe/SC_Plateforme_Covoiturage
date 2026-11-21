@@ -11,6 +11,7 @@ import ma.youcode.covoiturage.entity.Trajet;
 import ma.youcode.covoiturage.entity.enums.StatutReservation;
 import ma.youcode.covoiturage.entity.enums.StatutTrajet;
 import ma.youcode.covoiturage.exception.BusinessRuleException;
+import ma.youcode.covoiturage.exception.ForbiddenException;
 import ma.youcode.covoiturage.exception.InvalidRequestException;
 import ma.youcode.covoiturage.exception.ResourceNotFoundException;
 import ma.youcode.covoiturage.mapper.ReservationMapper;
@@ -99,6 +100,43 @@ public class ReservationServiceImpl implements ReservationService {
                 pointDescente.getVille(), trajet.getId(), montantTotal);
 
         return reservationMapper.toResponse(reservationEnregistree, placesRestantes);
+    }
+
+    @Override
+    public void annuler(Long reservationId, Long passagerId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Réservation introuvable avec l'id " + reservationId));
+
+        if (!reservation.getPassager().getId().equals(passagerId)) {
+            throw new ForbiddenException("La réservation " + reservationId
+                    + " n'appartient pas au passager " + passagerId);
+        }
+
+        Trajet trajet = trajetRepository.findByIdForUpdate(reservation.getTrajet().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Trajet introuvable avec l'id " + reservation.getTrajet().getId()));
+
+        if (reservation.getStatut() == StatutReservation.ANNULEE) {
+            throw new BusinessRuleException("La réservation " + reservationId + " est déjà annulée");
+        }
+
+        LocalDateTime limite = trajet.getDateDepart().minusHours(24);
+        if (LocalDateTime.now().isAfter(limite)) {
+            throw new BusinessRuleException("Annulation impossible : le délai de 24 h avant le départ est dépassé "
+                    + "(limite : " + limite + ")");
+        }
+
+        reservation.setStatut(StatutReservation.ANNULEE);
+        reservationRepository.save(reservation);
+
+        if (trajet.getStatut() == StatutTrajet.COMPLET) {
+            trajet.setStatut(StatutTrajet.PUBLIE);
+            trajetRepository.save(trajet);
+        }
+
+        log.info("Réservation {} annulée par le passager {} sur le trajet {} (statut du trajet : {})",
+                reservationId, passagerId, trajet.getId(), trajet.getStatut());
     }
 
     private PointArret trouverPoint(Long pointId, Trajet trajet) {
