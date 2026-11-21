@@ -128,4 +128,24 @@ public class TrajetController {
             @RequestHeader("X-Conducteur-Id") Long conducteurId) {
         trajetService.terminer(id, conducteurId);
     }
+
+    @Operation(summary = "Annuler un trajet et ses réservations",
+            description = "Possible pour un trajet PUBLIE ou COMPLET. Le trajet passe à ANNULE et toutes ses "
+                    + "réservations confirmées passent à ANNULEE dans la même transaction : tout réussit ou tout échoue.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Trajet et réservations annulés"),
+            @ApiResponse(responseCode = "400", description = "En-tête X-Conducteur-Id manquant"),
+            @ApiResponse(responseCode = "403", description = "Trajet d'un autre conducteur"),
+            @ApiResponse(responseCode = "404", description = "Trajet introuvable"),
+            @ApiResponse(responseCode = "409", description = "Trajet déjà terminé ou annulé")
+    })
+    @PatchMapping("/{id}/annulation")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void annuler(
+            @Parameter(description = "Identifiant du trajet", example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Identifiant du conducteur connecté", example = "1")
+            @RequestHeader("X-Conducteur-Id") Long conducteurId) {
+        trajetService.annuler(id, conducteurId);
+    }
 }
