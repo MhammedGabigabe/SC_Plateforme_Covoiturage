@@ -39,4 +39,24 @@ public class ReservationController {
             @Valid @RequestBody ReservationRequest request) {
         return reservationService.reserver(passagerId, request);
     }
+
+    @Operation(summary = "Annuler ma réservation",
+            description = "Possible jusqu'à 24 heures avant le départ du trajet. Les places sont libérées "
+                    + "et un trajet COMPLET repasse à PUBLIE. La réservation passe au statut ANNULEE (elle n'est pas supprimée).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Réservation annulée"),
+            @ApiResponse(responseCode = "400", description = "En-tête X-Passager-Id manquant"),
+            @ApiResponse(responseCode = "403", description = "Réservation d'un autre passager"),
+            @ApiResponse(responseCode = "404", description = "Réservation introuvable"),
+            @ApiResponse(responseCode = "409", description = "Réservation déjà annulée ou délai de 24 h dépassé")
+    })
+    @PatchMapping("/{id}/annulation")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void annuler(
+            @Parameter(description = "Identifiant de la réservation", example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Identifiant du passager connecté", example = "1")
+            @RequestHeader("X-Passager-Id") Long passagerId) {
+        reservationService.annuler(id, passagerId);
+    }
 }
