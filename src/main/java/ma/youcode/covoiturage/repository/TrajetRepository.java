@@ -1,5 +1,6 @@
 package ma.youcode.covoiturage.repository;
 
+import jakarta.persistence.LockModeType;
 import ma.youcode.covoiturage.dto.response.TrajetRechercheResponse;
 import ma.youcode.covoiturage.entity.Trajet;
 import ma.youcode.covoiturage.entity.enums.StatutReservation;
@@ -7,6 +8,7 @@ import ma.youcode.covoiturage.entity.enums.StatutTrajet;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -84,4 +86,8 @@ public interface TrajetRepository extends JpaRepository<Trajet, Long> {
                                              @Param("statutTrajet") StatutTrajet statutTrajet,
                                              @Param("statutReservation") StatutReservation statutReservation,
                                              Pageable pageable);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Trajet t WHERE t.id = :id")
+    Optional<Trajet> findByIdForUpdate(@Param("id") Long id);
 }
