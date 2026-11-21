@@ -34,8 +34,17 @@ public interface TrajetRepository extends JpaRepository<Trajet, Long> {
                 arrivee.ville,
                 depart.heurePassage,
                 arrivee.heurePassage,
-                (arrivee.prixDepuisDepart - depart.prixDepuisDepart))
+                (arrivee.prixDepuisDepart - depart.prixDepuisDepart),
+                (t.placesProposees - COALESCE(
+                    (SELECT SUM(r.nombrePlaces) FROM Reservation r
+                     WHERE r.trajet = t AND r.statut = :statutReservation), 0L)),
+                c.nom,
+                c.prenom,
+                v.marque,
+                v.modele)
             FROM Trajet t
+            JOIN t.vehicule v
+            JOIN v.conducteur c
             JOIN t.pointsArret depart
             JOIN t.pointsArret arrivee
             WHERE t.statut = :statutTrajet
@@ -46,8 +55,8 @@ public interface TrajetRepository extends JpaRepository<Trajet, Long> {
               AND t.dateDepart < :finJour
               AND (arrivee.prixDepuisDepart - depart.prixDepuisDepart) <= :prixMax
               AND (t.placesProposees - COALESCE(
-                    (SELECT SUM(r.nombrePlaces) FROM Reservation r
-                     WHERE r.trajet = t AND r.statut = :statutReservation), 0L)) >= :nombrePlaces
+                    (SELECT SUM(r2.nombrePlaces) FROM Reservation r2
+                     WHERE r2.trajet = t AND r2.statut = :statutReservation), 0L)) >= :nombrePlaces
             ORDER BY t.dateDepart
             """,
             countQuery = """
@@ -63,8 +72,8 @@ public interface TrajetRepository extends JpaRepository<Trajet, Long> {
               AND t.dateDepart < :finJour
               AND (arrivee.prixDepuisDepart - depart.prixDepuisDepart) <= :prixMax
               AND (t.placesProposees - COALESCE(
-                    (SELECT SUM(r.nombrePlaces) FROM Reservation r
-                     WHERE r.trajet = t AND r.statut = :statutReservation), 0L)) >= :nombrePlaces
+                    (SELECT SUM(r2.nombrePlaces) FROM Reservation r2
+                     WHERE r2.trajet = t AND r2.statut = :statutReservation), 0L)) >= :nombrePlaces
             """)
     Page<TrajetRechercheResponse> rechercher(@Param("villeDepart") String villeDepart,
                                              @Param("villeArrivee") String villeArrivee,
