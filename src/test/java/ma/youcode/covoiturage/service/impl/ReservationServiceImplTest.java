@@ -5,6 +5,10 @@ import ma.youcode.covoiturage.dto.response.ReservationResumeResponse;
 import ma.youcode.covoiturage.entity.*;
 import ma.youcode.covoiturage.entity.enums.StatutReservation;
 import ma.youcode.covoiturage.entity.enums.StatutTrajet;
+import ma.youcode.covoiturage.exception.BusinessRuleException;
+import ma.youcode.covoiturage.exception.ForbiddenException;
+import ma.youcode.covoiturage.exception.InvalidRequestException;
+import ma.youcode.covoiturage.exception.ResourceNotFoundException;
 import ma.youcode.covoiturage.mapper.ReservationMapper;
 import ma.youcode.covoiturage.repository.*;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -185,5 +190,192 @@ class ReservationServiceImplTest {
 
         assertThat(historique).hasSize(2);
         verify(reservationMapper, times(2)).toResume(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : passager introuvable → 404")
+    void reserver_passagerInconnu_leveResourceNotFound() {
+        when(passagerRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reservationService.reserver(99L, new ReservationRequest(1L, 3L, 4L, 1)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Passager introuvable");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : trajet introuvable → 404")
+    void reserver_trajetInconnu_leveResourceNotFound() {
+        Passager salma = creerPassager(1L);
+        when(passagerRepository.findById(1L)).thenReturn(Optional.of(salma));
+        when(trajetRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reservationService.reserver(1L, new ReservationRequest(99L, 3L, 4L, 1)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Trajet introuvable");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : trajet COMPLET → 409 (scénario 4)")
+    void reserver_trajetComplet_leveBusinessRule() {
+        Passager imane = creerPassager(3L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.COMPLET, 3);
+        simulerPassagerEtTrajet(imane, trajet);
+
+        assertThatThrownBy(() -> reservationService.reserver(3L, new ReservationRequest(1L, 3L, 4L, 1)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("n'est pas ouvert à la réservation");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : trajet ANNULE → 409")
+    void reserver_trajetAnnule_leveBusinessRule() {
+        Passager imane = creerPassager(3L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.ANNULE, 3);
+        simulerPassagerEtTrajet(imane, trajet);
+
+        assertThatThrownBy(() -> reservationService.reserver(3L, new ReservationRequest(1L, 3L, 4L, 1)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("n'est pas ouvert à la réservation");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : montée à Marrakech et descente à Settat → 400 (scénario 6)")
+    void reserver_monteeApresDescente_leveInvalidRequest() {
+        Passager imane = creerPassager(3L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        simulerPassagerEtTrajet(imane, trajet);
+
+        assertThatThrownBy(() -> reservationService.reserver(3L, new ReservationRequest(1L, 4L, 3L, 1)))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("doit être avant le point de descente");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : même point de montée et de descente → 400")
+    void reserver_monteeEgaleDescente_leveInvalidRequest() {
+        Passager imane = creerPassager(3L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        simulerPassagerEtTrajet(imane, trajet);
+
+        assertThatThrownBy(() -> reservationService.reserver(3L, new ReservationRequest(1L, 3L, 3L, 1)))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("doit être avant le point de descente");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : point d'arrêt qui n'appartient pas au trajet → 400")
+    void reserver_pointHorsTrajet_leveInvalidRequest() {
+        Passager imane = creerPassager(3L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        simulerPassagerEtTrajet(imane, trajet);
+
+        assertThatThrownBy(() -> reservationService.reserver(3L, new ReservationRequest(1L, 99L, 4L, 1)))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("n'appartient pas au trajet");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : passager ayant déjà une réservation confirmée sur le trajet → 409")
+    void reserver_reservationDejaConfirmee_leveBusinessRule() {
+        Passager salma = creerPassager(1L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        simulerPassagerEtTrajet(salma, trajet);
+        when(reservationRepository.existsByPassagerIdAndTrajetIdAndStatut(1L, 1L, StatutReservation.CONFIRMEE))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> reservationService.reserver(1L, new ReservationRequest(1L, 3L, 4L, 1)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("déjà une réservation confirmée");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("reserver : plus de places demandées que de places restantes → 409")
+    void reserver_tropDePlaces_leveBusinessRule() {
+        Passager karim = creerPassager(2L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        simulerPassagerEtTrajet(karim, trajet);
+        when(reservationRepository.compterPlacesReservees(1L, StatutReservation.CONFIRMEE)).thenReturn(2L);
+
+        assertThatThrownBy(() -> reservationService.reserver(2L, new ReservationRequest(1L, 3L, 4L, 2)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Il ne reste que 1 place");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+        verify(trajetRepository, never()).save(any(Trajet.class));
+    }
+
+    @Test
+    @DisplayName("annuler : réservation introuvable → 404")
+    void annuler_reservationInconnue_leveResourceNotFound() {
+        when(reservationRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reservationService.annuler(99L, 1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Réservation introuvable");
+    }
+
+    @Test
+    @DisplayName("annuler : réservation d'un autre passager → 403")
+    void annuler_reservationDunAutrePassager_leveForbidden() {
+        Passager salma = creerPassager(1L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        Reservation reservation = creerReservation(10L, salma, trajet, StatutReservation.CONFIRMEE);
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+
+        assertThatThrownBy(() -> reservationService.annuler(10L, 2L))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("n'appartient pas au passager");
+        assertThat(reservation.getStatut()).isEqualTo(StatutReservation.CONFIRMEE);
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("annuler : réservation déjà annulée → 409")
+    void annuler_reservationDejaAnnulee_leveBusinessRule() {
+        Passager salma = creerPassager(1L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        Reservation reservation = creerReservation(10L, salma, trajet, StatutReservation.ANNULEE);
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+        when(trajetRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(trajet));
+
+        assertThatThrownBy(() -> reservationService.annuler(10L, 1L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("déjà annulée");
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("annuler : moins de 24 h avant le départ → 409 (scénario 10)")
+    void annuler_moinsDe24hAvantLeDepart_leveBusinessRule() {
+        Passager salma = creerPassager(1L);
+        Trajet trajet = creerTrajetDeHamid(StatutTrajet.PUBLIE, 3);
+        trajet.setDateDepart(LocalDateTime.now().plusHours(2));
+        Reservation reservation = creerReservation(10L, salma, trajet, StatutReservation.CONFIRMEE);
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+        when(trajetRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(trajet));
+
+        assertThatThrownBy(() -> reservationService.annuler(10L, 1L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("délai de 24 h");
+        assertThat(reservation.getStatut()).isEqualTo(StatutReservation.CONFIRMEE);
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("consulterMesReservations : passager introuvable → 404")
+    void consulterMesReservations_passagerInconnu_leveResourceNotFound() {
+        when(passagerRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> reservationService.consulterMesReservations(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Passager introuvable");
+        verify(reservationRepository, never()).listerParPassager(any());
     }
 }
